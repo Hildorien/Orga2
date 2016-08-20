@@ -12,11 +12,11 @@ int main (void){
     fclose( pFile ); */
     ctTree* pct;
     ct_new(&pct);
+    ct_add(pct,10);
     ct_add(pct,20);
-    ct_add(pct,50);
-    ct_add(pct,100);
-   	ctNode* nodo1 = malloc(sizeof(ctNode));
-   // ct_add(pct,15);
+    ct_add(pct,30);   	
+
+    ct_delete(&pct);
 
 
     
