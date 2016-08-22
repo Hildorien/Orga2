@@ -8,15 +8,32 @@ int main (void){
     FILE *pFile = fopen( name, "a" );
     
     fprintf(pFile,"-\n");
-        
+    
     fclose( pFile ); */
     ctTree* pct;
     ct_new(&pct);
-    ct_add(pct,10);
+    ctIter* it = ctIter_new(pct);
     ct_add(pct,20);
-    ct_add(pct,30);   	
+    ct_add(pct,30);
+    ct_add(pct,100); 
+    ct_add(pct,10);
 
+    ct_add(pct,40); 
+    ct_add(pct,25);
+
+
+
+    ctIter_first(it);
+    int r = ctIter_get(it);
+    printf("%d\n",r );
+
+    ctIter_delete(it);
     ct_delete(&pct);
+   
+   
+   
+
+
 
 
     

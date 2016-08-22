@@ -65,29 +65,69 @@ ct_aux_destructorrecursivo:
       push rbp
       mov rbp,rsp
       push rbx
-      sub rsp,8
+      push r12
+      push r13
+      push r14
+      push r15
 
-      mov rbx,rdi      ;muevo a r13 la direccion del nodo
+      mov rbx,rdi 
+      cmp rbx,NULL                            ;me fijo si me pasaron la dir NULL que es cuando ya no hay mas nodo (el arbol vacio)
+      je .fin                                 ;en ese caso voy al fin
       cmp  qword [rbx+NODE_OFFSET_CHILD],NULL ;me fijo si no tiene child[0]
       je .siguechild1
       jmp .tienehijo0
+      
       .siguechild1:
       cmp qword [rbx+NODE_OFFSET_CHILD1],NULL ;me fijo si no tiene child[1] sabiendo que no hay en los  anteriores
       je .siguechild2                  ; si no tiene hijo me fijo el siguiente
       jmp .tienehijo1                  ; si tiene hijo salto a hacer la parte recursiva con ese nodo
+      
       .siguechild2:
       cmp qword [rbx+NODE_OFFSET_CHILD2],NULL ;me fijo si no tiene child[2] sabiendo que no hay en los anteriores
       je .siguechild3
       jmp .tienehijo2
+      
       .siguechild3:
       cmp qword [rbx+NODE_OFFSET_CHILD3],NULL ;me fio si no tiene child[3] sabiendo que no hay en los anteriores
       je .eliminarhoja
       jmp .tienehijo3
 
-      .eliminarhoja:
-      mov rdi,rbx                    ;copio la dir de r13(que es la del nodo) a rdi
-      call free                       
-      jmp .fin
+      .eliminarhoja:                       
+      mov r12,[rbx+NODE_OFFSET_FATHER]   ;guardo la dir del padre en r12 para ver que hijo del padre tengo que eliminar antes de eliminar la hoja(hijo)
+      cmp r12,NULL                       ;si es la raiz su padre es null
+      je .sigoenhoja
+      cmp qword rbx,[r12+NODE_OFFSET_CHILD]    ;me fijo si la hoja provenia de child0 en su padre
+      je .sacarhijo0
+      cmp qword rbx,[r12+NODE_OFFSET_CHILD1]    ;me fijo si la hoja provenia de child1 en su padre
+      je .sacarhijo1
+      cmp qword rbx,[r12+NODE_OFFSET_CHILD2]    ;me fijo si la hoja provenia de child2 en su padre
+      je .sacarhijo2
+      cmp qword rbx,[r12+NODE_OFFSET_CHILD3]    ;me fijo si la hoja provenia de child3 en su padre
+      je .sacarhijo3
+
+      .sacarhijo0:
+      mov qword [r12+NODE_OFFSET_CHILD],NULL
+      jmp .sigoenhoja
+     
+      .sacarhijo1:
+      mov qword [r12+NODE_OFFSET_CHILD1],NULL
+      jmp .sigoenhoja
+      
+      .sacarhijo2:
+      mov qword [r12+NODE_OFFSET_CHILD2],NULL
+      jmp .sigoenhoja
+      
+      .sacarhijo3:
+      mov qword [r12+NODE_OFFSET_CHILD3],NULL
+      jmp .sigoenhoja
+
+      ;si no saco el puntero al hijo en el padre de la hoja que voy a eliminar va a quedar colgando ese puntero, como lo voy a sacar el padre ya no deberia tener ese hijo
+
+      .sigoenhoja:
+      mov rdi,rbx                        ;copio la dir de rbx(que es la del nodo) a rdi
+      call free                          ;elimino la hoja
+      mov rdi,r12                        ;muevo a rdi el padre
+      call ct_aux_destructorrecursivo    ;llamo a la funcion desde el padre cuyo hijo fue eliminado
 
       .tienehijo0:
       mov  qword rdi,[rbx+NODE_OFFSET_CHILD] ;copio a rdi el puntero a hijo[0]
@@ -104,14 +144,15 @@ ct_aux_destructorrecursivo:
       .tienehijo3:
       mov  qword rdi,[rbx+NODE_OFFSET_CHILD3] ;copio a rdi el puntero a hijo[3]
       call ct_aux_destructorrecursivo
-
-
-
+     
       .fin:
-      add rsp,8
-      push rbx
+      pop r15
+      pop r14
+      pop r13
+      pop r12
+      pop rbx
       pop rbp
-      ret
+      ret                      ;este ret salta vuelve a cualquier lado (primero salta a las etiquetas tiene hijos y despues salta a elimina vacio)
 ; void ct_delete(ctTree** pct);
 ct_delete:
                                               ;rdi <-- pct (dir de memoria que apunta a un puntero al arbol)
@@ -120,18 +161,22 @@ ct_delete:
       push rbx
       sub rsp,8
       
-      mov rbx,rdi                            ;guardo en rbx la direccion de pct para no perderla
-      cmp qword [rbx],NULL                         ;comparo con la dir en [rbx] (donde esta el arbol) para ver si esta vacio
+      mov rbx,rdi                            ;guardo en rbx la direccion que apunta a pct para no perderla
+      mov rdi,[rbx]
+      cmp qword [rdi+TREE_OFFSET_ROOT],NULL                   ;comparo con la dir en [rbx] (donde esta el arbol) para ver si esta vacio
       jne .else                              ;si no esta vacio voy a else
                                             ;si esta vacio prosigo
-      mov rax,[rbx]                         ;ubico la dir del arbol en rax
-      mov rdi,rax                           ;copio la dir del arbol a rdi para usar free
+    .elimina_vacio:  
+      mov rdi,[rbx]                         ;copio la dir del arbol a rdi para usar free
       call free                             ;libera la memoria alocada por el arbol vacio
+      jmp .end
 
       .else:                                ;el arbol no es vacio
-        mov qword rdi,[rbx+TREE_OFFSET_ROOT]    ;muevo a rdi la dir de la raiz del arbol
-        call ct_aux_destructorrecursivo
-
+        mov rdi,[rbx]                       ;muevo a rdi la dir del arbol que esta en [rbx]
+        mov rdi,[rdi+TREE_OFFSET_ROOT]      ;muevo a rdi la dir de la raiz del arbol
+        call ct_aux_destructorrecursivo     ;llamo a una funcion auxiliar que elimina los nodos del arbol recursivamente
+        jmp .elimina_vacio
+      .end:
       add rsp,8
       pop rbx
       pop rbp
@@ -179,7 +224,30 @@ ctIter_delete:
 
 ; =====================================
 ; void ctIter_first(ctIter* ctIt);
+;rdi <--- puntero al iterador
 ctIter_first:
+        mov rsi,[rdi+ITER_OFFSET_TREE]        ;copio a rsi la direccion del arbol 
+        cmp qword [rsi+TREE_OFFSET_ROOT],NULL ;me fijo si el arbol es vacio
+        je .vacio            
+
+        cmp dword [rsi+TREE_OFFSET_CANT],1       ;si el arbol tiene un solo nodo (es hoja)
+        jne .haymashijos
+        mov rsi,[rsi+TREE_OFFSET_ROOT]   ;muevo a rsi la direccion del nodo que apunta a la raiz
+        mov [rdi+ITER_OFFSET_NODE],rsi   ;actualizo el puntero a nodo del iterador con el nodo q apunta a la raiz
+        
+        .haymashijos:
+        mov rsi,[rsi+TREE_OFFSET_ROOT]            ;copio a rsi la direccion de la raiz
+        .ciclo:
+        cmp qword [rsi+NODE_OFFSET_CHILD],NULL    ;comparo la dir del child[0] con NULL para ver si existe
+        je .fin
+        mov rsi,[rsi+NODE_OFFSET_CHILD]       ;mientras exista child[0] apuntar al child[0]
+        mov qword [rdi+ITER_OFFSET_NODE],rsi  ;escribo en rdi en la direccion del nodo, es decir la direccion de child[0] guardado en rsi
+        jmp .ciclo
+        
+        .vacio:
+        mov qword [rdi+ITER_OFFSET_NODE],NULL ;el nodo al que apunta get es NULL
+
+        .fin:
         ret
 
 ; =====================================
@@ -189,13 +257,34 @@ ctIter_next:
 
 ; =====================================
 ; uint32_t ctIter_get(ctIter* ctIt);
+;rdi <-- puntero al iterador
 ctIter_get:
-        ret
+    
+    mov rsi,[rdi+ITER_OFFSET_TREE]         ;copio a rsi la dir del arbol
+    cmp qword [rsi+TREE_OFFSET_ROOT],NULL ;me fijo que el arbol esta vacio
+    je .arbolvacio
+    mov rcx,[rdi+ITER_OFFSET_NODE] 
+    mov eax,[rcx+NODE_OFFSET_VALUE]
+    jmp .fin
+    
+    .arbolvacio:
+    mov eax,0   ;si el arbol es vacio get devuelve 0
+
+    .fin:
+    ret
 
 ; =====================================
 ; uint32_t ctIter_valid(ctIter* ctIt);
 ctIter_valid:
-        ret
+      cmp qword [rdi+ITER_OFFSET_NODE],NULL ;me fijo si el puntero a nodo es null
+      je .invalido
+      mov rax,1                       ;si es valido devuelve 1
+
+      .invalido:
+      mov rax,0                       ; si es invalido devuelve 0
+
+
+      ret
 
 
 
