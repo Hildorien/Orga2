@@ -65,94 +65,32 @@ ct_aux_destructorrecursivo:
       push rbp
       mov rbp,rsp
       push rbx
-      push r12
-      push r13
-      push r14
-      push r15
-
+      sub rsp,8
+      
       mov rbx,rdi 
-      cmp rbx,NULL                            ;me fijo si me pasaron la dir NULL que es cuando ya no hay mas nodo (el arbol vacio)
+      cmp rbx,NULL                            ;me fijo si me pasaron la dir NULL que es cuando ya no hay mas nodo
       je .fin                                 ;en ese caso voy al fin
-      cmp  qword [rbx+NODE_OFFSET_CHILD],NULL ;me fijo si no tiene child[0]
-      je .siguechild1
-      jmp .tienehijo0
       
-      .siguechild1:
-      cmp qword [rbx+NODE_OFFSET_CHILD1],NULL ;me fijo si no tiene child[1] sabiendo que no hay en los  anteriores
-      je .siguechild2                  ; si no tiene hijo me fijo el siguiente
-      jmp .tienehijo1                  ; si tiene hijo salto a hacer la parte recursiva con ese nodo
-      
-      .siguechild2:
-      cmp qword [rbx+NODE_OFFSET_CHILD2],NULL ;me fijo si no tiene child[2] sabiendo que no hay en los anteriores
-      je .siguechild3
-      jmp .tienehijo2
-      
-      .siguechild3:
-      cmp qword [rbx+NODE_OFFSET_CHILD3],NULL ;me fio si no tiene child[3] sabiendo que no hay en los anteriores
-      je .eliminarhoja
-      jmp .tienehijo3
-
-      .eliminarhoja:                       
-      mov r12,[rbx+NODE_OFFSET_FATHER]   ;guardo la dir del padre en r12 para ver que hijo del padre tengo que eliminar antes de eliminar la hoja(hijo)
-      cmp r12,NULL                       ;si es la raiz su padre es null
-      je .sigoenhoja
-      cmp qword rbx,[r12+NODE_OFFSET_CHILD]    ;me fijo si la hoja provenia de child0 en su padre
-      je .sacarhijo0
-      cmp qword rbx,[r12+NODE_OFFSET_CHILD1]    ;me fijo si la hoja provenia de child1 en su padre
-      je .sacarhijo1
-      cmp qword rbx,[r12+NODE_OFFSET_CHILD2]    ;me fijo si la hoja provenia de child2 en su padre
-      je .sacarhijo2
-      cmp qword rbx,[r12+NODE_OFFSET_CHILD3]    ;me fijo si la hoja provenia de child3 en su padre
-      je .sacarhijo3
-
-      .sacarhijo0:
-      mov qword [r12+NODE_OFFSET_CHILD],NULL
-      jmp .sigoenhoja
+      mov  rdi,[rbx+NODE_OFFSET_CHILD]       ;copio a rdi el puntero a hijo[0]
+      call ct_aux_destructorrecursivo        ;vuelvo a llamar la funcion pero con el hijo[0] como nodo de parametro
      
-      .sacarhijo1:
-      mov qword [r12+NODE_OFFSET_CHILD1],NULL
-      jmp .sigoenhoja
+      mov  rdi,[rbx+NODE_OFFSET_CHILD1]       ;copio a rdi el puntero a hijo[1]
+      call ct_aux_destructorrecursivo
+    
+      mov  rdi,[rbx+NODE_OFFSET_CHILD2]       ;copio a rdi el puntero a hijo[2]
+      call ct_aux_destructorrecursivo
       
-      .sacarhijo2:
-      mov qword [r12+NODE_OFFSET_CHILD2],NULL
-      jmp .sigoenhoja
-      
-      .sacarhijo3:
-      mov qword [r12+NODE_OFFSET_CHILD3],NULL
-      jmp .sigoenhoja
-
-      ;si no saco el puntero al hijo en el padre de la hoja que voy a eliminar va a quedar colgando ese puntero, como lo voy a sacar el padre ya no deberia tener ese hijo
-
-      .sigoenhoja:
+      mov  rdi,[rbx+NODE_OFFSET_CHILD3]       ;copio a rdi el puntero a hijo[3]
+      call ct_aux_destructorrecursivo
+                                         
       mov rdi,rbx                        ;copio la dir de rbx(que es la del nodo) a rdi
       call free                          ;elimino la hoja
-      mov rdi,r12                        ;muevo a rdi el padre
-      call ct_aux_destructorrecursivo    ;llamo a la funcion desde el padre cuyo hijo fue eliminado
-
-      .tienehijo0:
-      mov  qword rdi,[rbx+NODE_OFFSET_CHILD] ;copio a rdi el puntero a hijo[0]
-      call ct_aux_destructorrecursivo        ;vuelvo a llamar la funcion pero con el hijo[0] como nodo de parametro
-
-      .tienehijo1:
-      mov  qword rdi,[rbx+NODE_OFFSET_CHILD1] ;copio a rdi el puntero a hijo[1]
-      call ct_aux_destructorrecursivo
-
-      .tienehijo2:
-      mov  qword rdi,[rbx+NODE_OFFSET_CHILD2] ;copio a rdi el puntero a hijo[2]
-      call ct_aux_destructorrecursivo
-
-      .tienehijo3:
-      mov  qword rdi,[rbx+NODE_OFFSET_CHILD3] ;copio a rdi el puntero a hijo[3]
-      call ct_aux_destructorrecursivo
-     
+    
       .fin:
-      pop r15
-      pop r14
-      pop r13
-      pop r12
+      add rsp,8
       pop rbx
       pop rbp
-      ret                      ;este ret salta vuelve a cualquier lado (primero salta a las etiquetas tiene hijos y despues salta a elimina vacio)
+      ret                                ;en las llamadas recursivas el ret vuelve a ubicarse una linea despues de la llamada que hizo y asi se fija con todos los hijos del nodo
 ; void ct_delete(ctTree** pct);
 ct_delete:
                                               ;rdi <-- pct (dir de memoria que apunta a un puntero al arbol)
@@ -161,22 +99,17 @@ ct_delete:
       push rbx
       sub rsp,8
       
-      mov rbx,rdi                            ;guardo en rbx la direccion que apunta a pct para no perderla
-      mov rdi,[rbx]
-      cmp qword [rdi+TREE_OFFSET_ROOT],NULL                   ;comparo con la dir en [rbx] (donde esta el arbol) para ver si esta vacio
-      jne .else                              ;si no esta vacio voy a else
-                                            ;si esta vacio prosigo
-    .elimina_vacio:  
-      mov rdi,[rbx]                         ;copio la dir del arbol a rdi para usar free
-      call free                             ;libera la memoria alocada por el arbol vacio
-      jmp .end
-
-      .else:                                ;el arbol no es vacio
-        mov rdi,[rbx]                       ;muevo a rdi la dir del arbol que esta en [rbx]
-        mov rdi,[rdi+TREE_OFFSET_ROOT]      ;muevo a rdi la dir de la raiz del arbol
-        call ct_aux_destructorrecursivo     ;llamo a una funcion auxiliar que elimina los nodos del arbol recursivamente
-        jmp .elimina_vacio
-      .end:
+      mov rbx,[rdi]                            ;guardo en rbx la direccion del arbol con [rdi] y ademas para no perderla ya que hago free despues
+      mov rdi,rbx                              ;copio en rdi la direccion del arbol(antes tenia **)
+      cmp qword [rdi+TREE_OFFSET_ROOT],NULL    ;comparo con la dir en [rbx] (donde esta el arbol) para ver si esta vacio
+      je .end                              
+                                            
+      mov rdi,[rdi+TREE_OFFSET_ROOT]           ;guardo en rdi el puntero a la raiz que es un puntero a nodo para llamar a la funcion aux
+      call ct_aux_destructorrecursivo
+ 
+      .end:                                    ;en este caso el arbol esta vacio , entonces elimino la estructura
+      mov rdi,rbx               
+      call free
       add rsp,8
       pop rbx
       pop rbp
@@ -204,7 +137,7 @@ ctIter_new:
       mov rdi,ITER_OFFSET_SIZE
       call malloc
 
-      mov qword [rax+ITER_OFFSET_TREE],rbx  ;muevo la direccion del arbol guardada previamente en rbx
+      mov [rax+ITER_OFFSET_TREE],rbx        ;muevo la direccion del arbol guardada previamente en rbx
       mov qword [rax+ITER_OFFSET_NODE],NULL ;el iterador es invalido asique apunta a un nodo NULL
       mov byte [rax+ITER_OFFSET_CURRENT],0  ;el iterador tiene el indice 0 porque no apunta a nada
       mov dword [rax+ITER_OFFSET_COUNT],0   ;el iterador es invalido entonces no recorrio nada
@@ -234,6 +167,7 @@ ctIter_first:
         jne .haymashijos
         mov rsi,[rsi+TREE_OFFSET_ROOT]   ;muevo a rsi la direccion del nodo que apunta a la raiz
         mov [rdi+ITER_OFFSET_NODE],rsi   ;actualizo el puntero a nodo del iterador con el nodo q apunta a la raiz
+        jmp .fin
         
         .haymashijos:
         mov rsi,[rsi+TREE_OFFSET_ROOT]            ;copio a rsi la direccion de la raiz
@@ -241,22 +175,167 @@ ctIter_first:
         cmp qword [rsi+NODE_OFFSET_CHILD],NULL    ;comparo la dir del child[0] con NULL para ver si existe
         je .fin
         mov rsi,[rsi+NODE_OFFSET_CHILD]       ;mientras exista child[0] apuntar al child[0]
-        mov qword [rdi+ITER_OFFSET_NODE],rsi  ;escribo en rdi en la direccion del nodo, es decir la direccion de child[0] guardado en rsi
+        mov [rdi+ITER_OFFSET_NODE],rsi        ;escribo en rdi en la direccion del nodo, es decir la direccion de child[0] guardado en rsi
         jmp .ciclo
         
         .vacio:
         mov qword [rdi+ITER_OFFSET_NODE],NULL ;el nodo al que apunta get es NULL
 
         .fin:
+        mov dword [rdi+ITER_OFFSET_COUNT],0
         ret
 
 ; =====================================
+; unint 32_t ctIter_aux_isIn(ctNode* current, ctNode* father)
+ctIter_aux_isIn:
+            
+            cmp [rsi+NODE_OFFSET_CHILD],rdi  ;si la direccion del hijo[0] del padre coincide con el nodo actual , entonces subir por el hijo[0] en padre
+            je .Esdelhijo0
+
+            cmp [rsi+NODE_OFFSET_CHILD1],rdi
+            je .Esdelhijo1
+
+            cmp [rsi+NODE_OFFSET_CHILD2],rdi
+            je .Esdelhijo2
+
+            cmp [rsi+NODE_OFFSET_CHILD3],rdi
+            je .Esdelhijo3
+
+            .Esdelhijo0:
+            mov rax,0
+            ret
+
+            .Esdelhijo1:
+            mov rax,1
+            ret
+
+            .Esdelhijo2:
+            mov rax,2
+            ret
+
+            .Esdelhijo3:
+            mov rax,3
+            ret
+
+;void call ctIter_aux_up(ctIter* ctIt)
+ctIter_aux_up:
+          push rbp
+          mov rbp,rsp
+          push rbx
+          push r12
+          push r13
+          sub rsp,8
+          
+          mov rbx,rdi                       ;guardo la dir de rdi en rbx para no perderla
+          mov r12,[rbx+ITER_OFFSET_NODE]    ;copio a rbx la direccion del nodo al que apunta el iterador
+          mov r13,[r12+NODE_OFFSET_FATHER]  ;copio a r12 la direccion del padre del nodo al que apunta el iterador
+          mov rdi,r12                       ;copio rdi la dir el nodo al que apunta el iterador
+          mov rsi,r13                       ;copio a rsi la dir del padre del nodo al que apunta el iterador
+          call ctIter_aux_isIn   
+
+          cmp rax,0
+          je .Voyacurrent0 ;si rax devolvio 0 es porque el nodo actual es el hijo0 del padre entonces el siguiente elemento del iterador debe apuntar al value[0] del padre
+          cmp rax,1
+          je .Voyacurrent1
+          cmp rax,2
+          je .Voyacurrent2
+          cmp rax,3       ;si rax devolvio 3 es porque el nodo actual es el hijo3 del padre y ya recorrio todos los nodos
+          je .fin
+
+          .Voyacurrent0:
+          mov rdi,rbx
+          mov [rdi+ITER_OFFSET_NODE],r13
+          mov byte [rdi+ITER_OFFSET_CURRENT],0
+          jmp .fin
+
+          .Voyacurrent1:
+          mov rdi,rbx
+          mov [rdi+ITER_OFFSET_NODE],r13
+          mov byte [rdi+ITER_OFFSET_CURRENT],1
+          jmp .fin
+
+          .Voyacurrent2:
+          mov rdi,rbx
+          mov [rdi+ITER_OFFSET_NODE],r13
+          mov byte [rdi+ITER_OFFSET_CURRENT],2
+          jmp .fin
+
+          .fin:
+          add rsp,8
+          pop r13
+          pop r12
+          pop rbx
+          pop rbp
+          ret
+;ctIter_aux_down(crIter* ctIt)
+ctIter_aux_down:
+          push rbp
+          mov rbp,rsp
+          push rbx
+          sub rsp,8
+
+          mov rbx,[rdi+ITER_OFFSET_NODE] ;copio a rbx la dir del nodo al que apunta el iterador
+            .ciclo:
+            cmp qword [rbx+NODE_OFFSET_CHILD],NULL  ;mientras la dir del hijo[0] no sea cero bajar
+            je .fin
+            mov rbx,[rbx+NODE_OFFSET_CHILD]         ;mientras haya hijo[0] , actualizar el puntero a nodo del iterador
+            mov [rdi+ITER_OFFSET_NODE],rbx
+            jmp .ciclo
+
+          .fin:
+          add rsp,8
+          pop rbx
+          pop rbp
+          ret
+
 ; void ctIter_next(ctIter* ctIt);
+;rdi<-- puntero al iterador
 ctIter_next:
+        push rbp
+        mov rbp,rsp
+        push rbx
+        push r12
+        push r13
+        push r14
+        sub rsp,8
+
+        xor rbx,rbx
+        xor r12,r12
+        xor r14,r14
+        
+        mov rbx,rdi                                   ;guardo la dir del iterador para no perderlo
+        mov r12,[rbx+ITER_OFFSET_CURRENT]             ;guardo en r12 el valor de current
+        mov r13,[rbx+ITER_OFFSET_NODE]                ;guardo en r13 la dir del nodo al que apunta
+        inc r12                                       ;incremento 1 el current
+        add dword [rbx+ITER_OFFSET_COUNT],1           ;incremento 1 el contador porque el iterador se movio
+        cmp qword [r13+NODE_OFFSET_CHILD+r12],NULL    ;if(ctIt->node->child[ctIt->current] == 0)
+        jne .haymashijos
+        mov r14,[r13+NODE_OFFSET_LEN]
+        dec r14
+        
+        cmp r12,r14            ;if(ctIt->current > ctIt->node->len -1)
+        jle .fin
+        mov rdi,rbx
+        call ctIter_aux_up
+        jmp .fin
+
+        .haymashijos:
+        lea r13,[r13+NODE_OFFSET_CHILD+r12]      ; ctIt->node = ctIt->node->child[ctIt->current]
+        mov rdi,rbx                               ;muevo a rdi la direccion del puntero al iterador pasado como parametro
+        mov [rdi+ITER_OFFSET_NODE],r13            ;actualizo el puntero a nodo del iterador
+        call ctIter_aux_down
+
+        .fin:
+        add rsp,8
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
         ret
 
 ; =====================================
-; uint32_t ctIter_get(ctIter* ctIt);
+;uint32_t ctIter_get(ctIter* ctIt);
 ;rdi <-- puntero al iterador
 ctIter_get:
     
