@@ -283,6 +283,7 @@ ctIter_aux_down:
             jmp .ciclo
 
           .fin:
+          mov byte [rdi+ITER_OFFSET_CURRENT],0     ;como bajo a la hoja con el elemento mas chico el current se actualiza al indice 0
           add rsp,8
           pop rbx
           pop rbp
@@ -297,36 +298,40 @@ ctIter_next:
         push r12
         push r13
         push r14
-        sub rsp,8
+        push r15
 
         xor rbx,rbx
         xor r12,r12
         xor r14,r14
+        xor r15,r15
         
         mov rbx,rdi                                   ;guardo la dir del iterador para no perderlo
-        mov r12,[rbx+ITER_OFFSET_CURRENT]             ;guardo en r12 el valor de current
+        mov r12b,[rbx+ITER_OFFSET_CURRENT]             ;guardo en r12 el valor de current
         mov r13,[rbx+ITER_OFFSET_NODE]                ;guardo en r13 la dir del nodo al que apunta
-        inc r12                                       ;incremento 1 el current
+        add byte [rbx+ITER_OFFSET_CURRENT],1          ;actualizo el current del iterador
+        inc r12b                                       ;incremento 1 el current
         add dword [rbx+ITER_OFFSET_COUNT],1           ;incremento 1 el contador porque el iterador se movio
-        cmp qword [r13+NODE_OFFSET_CHILD+r12],NULL    ;if(ctIt->node->child[ctIt->current] == 0)
+        mov ax,r12w
+        imul ax,8
+        mov r15w,ax                                   ;Para moverme entre el arreglo de childs tengo que moverme en current*8(tam de un puntero)
+        cmp qword [r13+NODE_OFFSET_CHILD+r15],NULL    ;if(ctIt->node->child[ctIt->current] == 0)
         jne .haymashijos
-        mov r14,[r13+NODE_OFFSET_LEN]
-        dec r14
+        mov r14b,[r13+NODE_OFFSET_LEN]
+        dec r14b
         
-        cmp r12,r14            ;if(ctIt->current > ctIt->node->len -1)
+        cmp r12b,r14b            ;if(ctIt->current > ctIt->node->len -1)
         jle .fin
         mov rdi,rbx
         call ctIter_aux_up
         jmp .fin
 
         .haymashijos:
-        lea r13,[r13+NODE_OFFSET_CHILD+r12]      ; ctIt->node = ctIt->node->child[ctIt->current]
+        mov r13,[r13+NODE_OFFSET_CHILD+r15]      ; ctIt->node = ctIt->node->child[ctIt->current]
         mov rdi,rbx                               ;muevo a rdi la direccion del puntero al iterador pasado como parametro
         mov [rdi+ITER_OFFSET_NODE],r13            ;actualizo el puntero a nodo del iterador
         call ctIter_aux_down
-
         .fin:
-        add rsp,8
+        pop r15
         pop r14
         pop r13
         pop r12
@@ -339,11 +344,17 @@ ctIter_next:
 ;rdi <-- puntero al iterador
 ctIter_get:
     
+    xor r9,r9
+    xor r8,r8
     mov rsi,[rdi+ITER_OFFSET_TREE]         ;copio a rsi la dir del arbol
     cmp qword [rsi+TREE_OFFSET_ROOT],NULL ;me fijo que el arbol esta vacio
     je .arbolvacio
-    mov rcx,[rdi+ITER_OFFSET_NODE] 
-    mov eax,[rcx+NODE_OFFSET_VALUE]
+    mov rcx,[rdi+ITER_OFFSET_NODE]        ;copio a rcx la direccion del nodo
+    mov r9b,[rdi+ITER_OFFSET_CURRENT]     ;copio a r9b(reg de 1byte) el valor del current
+    mov ax,r9w                          
+    imul ax,4
+    mov r8w,ax                            ;debo imprimir el value en la posicion current*4bytes para ir moviendome por el arreglo por eso hago la multiplicacion
+    mov eax,[rcx+NODE_OFFSET_VALUE+r8]    ;en r8 se encuentra el indice del value en el que el iterador debe obtener
     jmp .fin
     
     .arbolvacio:
