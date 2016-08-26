@@ -4,15 +4,14 @@
 #include "cuatrotree.h"
 
 int main (void){
- /*   char* name = "cambiameporotronombre.txt";
-    FILE *pFile = fopen( name, "a" );
+    char* name = "imprimearbol.txt";
+    FILE *pFile = fopen( name, "w" );
     
     fprintf(pFile,"-\n");
-    
-    fclose( pFile ); */
+   
     ctTree* pct;
     ct_new(&pct);
-    ctIter* it = ctIter_new(pct);
+   //ctIter* it = ctIter_new(pct);
     ct_add(pct,10);
     ct_add(pct,50);
     ct_add(pct,30); 
@@ -23,11 +22,11 @@ int main (void){
     ct_add(pct,19);
     ct_add(pct,39);
     ct_add(pct,4);
-  
+    ct_print(pct,pFile);
 
 
 
-      ctIter_first(it);
+     /* ctIter_first(it);
       int r = ctIter_get(it);
       printf("%d\n",r );
 
@@ -65,11 +64,11 @@ int main (void){
 
       ctIter_next(it);
       int a = ctIter_get(it);
-      printf("%d\n",a );
+      printf("%d\n",a );*/
 
 
 
-    ctIter_delete(it);
+   // ctIter_delete(it);
     ct_delete(&pct);
    
    
@@ -77,7 +76,7 @@ int main (void){
 
 
 
-
+    fclose( pFile ); 
     
     return 0;    
 }

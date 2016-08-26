@@ -20,6 +20,8 @@
 %define TREE_OFFSET_SIZE 12
 %define NODE_OFFSET_FATHER 0
 %define NODE_OFFSET_VALUE 8
+%define NODE_OFFSET_VALUE1 12
+%define NODE_OFFSET_VALUE2 16
 %define NODE_OFFSET_LEN 20 ;len es uint8_t -> ocupa 1 byte
 %define NODE_OFFSET_CHILD 21
 %define NODE_OFFSET_CHILD1 29
@@ -32,6 +34,12 @@
 %define ITER_OFFSET_CURRENT 16 ;current es un uint8_t -> ocupa 1 byte
 %define ITER_OFFSET_COUNT 17
 %define ITER_OFFSET_SIZE 21 
+
+section .data
+formato : db "%d",10,0
+formatovacio : db "%s",10,0
+msj : db "El arbol esta vacio",10,0
+
 
 
 section .text
@@ -116,13 +124,84 @@ ct_delete:
       ret
 
 ; ; =====================================
-; ; void ct_aux_print(ctNode* node);
+; ; void ct_aux_print(ctNode* node,File* pFile);
+; fprintf : rdi-> pfile , rsi-> formato ,rdx -> elemento
 ct_aux_print:
+        push rbp ;a
+        mov rbp,rsp
+        push rbx ;d
+        push r12 ;a
+        push r13 ;d 
+        sub rsp,8
+           
+        xor r12,r12  
+        mov rbx,rdi    ;guardo en rbx la direccion del puntero
+        mov r13,rsi    ;guardo en r13 el puntero al archivo
+        mov r12,0      ;inicializo el contador
+       .ciclo:
+          cmp r12b,[rbx+NODE_OFFSET_LEN]   ;for(i=0;i<len;i++)
+          jge .salgo
+          
+          cmp qword [rbx+NODE_OFFSET_CHILD+r12*8],NULL
+          je .sigo
+
+          mov rdi,[rbx+NODE_OFFSET_CHILD+r12*8]
+          mov rsi,r13
+          call ct_aux_print
+          
+          .sigo:
+          mov rdi,r13
+          mov rsi,formato
+          mov edx,[rbx+NODE_OFFSET_VALUE+r12*4]       
+          call fprintf
+          inc r12
+          jmp .ciclo
+
+  
+        .salgo:
+        cmp qword [rbx+NODE_OFFSET_CHILD3],NULL
+        je .fin
+        mov rdi,[rbx+NODE_OFFSET_CHILD3]
+        mov rsi,r13
+        call ct_aux_print  
+
+        .fin:
+        add rsp,8
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
         ret
 
 ; ; =====================================
-; ; void ct_print(ctTree* ct);
+; ; void ct_print(ctTree* ct,File* pFile);
+; fprintf : rdi-> pfile , rsi-> formato ,rdx -> elemento
 ct_print:
+        push rbp
+        mov rbp,rsp
+        push rbx
+        sub rsp,8
+        
+
+        mov rbx,rdi                           ;me guardo en rbx la dir del puntero al arbol
+        cmp qword [rbx+TREE_OFFSET_ROOT],NULL ;si el puntero al arbol apunta a algo vacio
+        je .abvacio 
+                                  
+        mov rdi,[rbx+TREE_OFFSET_ROOT]        ;como el arbol no es vacio llamo a una funcion auxiliar que imprime todos los nodos
+        call ct_aux_print
+        jmp .fin    
+
+        .abvacio:              
+        mov rdi,rsi             ;guardo en rdi el puntero al archivo
+        mov rsi,formatovacio    ;guardo en rsi el formato del texto            
+        mov rdx,msj             ;guardo en rdx el mensaje al escribir en el archivo   
+        call fprintf
+        
+
+        .fin:
+        add rsp,8
+        pop rbx
+        pop rbp
         ret
 
 ; =====================================
