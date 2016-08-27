@@ -261,12 +261,15 @@ ctIter_first:
         mov qword [rdi+ITER_OFFSET_NODE],NULL ;el nodo al que apunta get es NULL
 
         .fin:
-        mov dword [rdi+ITER_OFFSET_COUNT],0
+        mov dword [rdi+ITER_OFFSET_COUNT],1
         ret
 
 ; =====================================
 ; unint 32_t ctIter_aux_isIn(ctNode* current, ctNode* father)
 ctIter_aux_isIn:
+  
+            cmp rsi,NULL
+            je .fin
             
             cmp [rsi+NODE_OFFSET_CHILD],rdi  ;si la direccion del hijo[0] del padre coincide con el nodo actual , entonces subir por el hijo[0] en padre
             je .Esdelhijo0
@@ -294,6 +297,7 @@ ctIter_aux_isIn:
 
             .Esdelhijo3:
             mov rax,3
+            .fin:
             ret
 
 ;void call ctIter_aux_up(ctIter* ctIt)
@@ -448,11 +452,12 @@ ctIter_valid:
       cmp qword [rdi+ITER_OFFSET_NODE],NULL ;me fijo si el puntero a nodo es null
       je .invalido
       mov rax,1                       ;si es valido devuelve 1
+      jmp .fin
 
       .invalido:
       mov rax,0                       ; si es invalido devuelve 0
 
-
+      .fin:
       ret
 
 
