@@ -323,7 +323,7 @@ ctIter_aux_up:
           cmp rax,2
           je .Voyacurrent2
           cmp rax,3       ;si rax devolvio 3 es porque el nodo actual es el hijo3 del padre y ya recorrio todos los nodos
-          je .fin
+          je .recursionarriba  ;tengo que subir hasta arriba de todo con llamadas recursivas
 
           .Voyacurrent0:
           mov rdi,rbx
@@ -342,6 +342,11 @@ ctIter_aux_up:
           mov [rdi+ITER_OFFSET_NODE],r13
           mov byte [rdi+ITER_OFFSET_CURRENT],2
           jmp .fin
+
+          .recursionarriba:
+          mov rdi,rbx
+          mov [rdi+ITER_OFFSET_NODE],r13
+          call ctIter_aux_up
 
           .fin:
           add rsp,8
