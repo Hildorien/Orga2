@@ -242,10 +242,11 @@ ctIter_first:
         cmp qword [rsi+TREE_OFFSET_ROOT],NULL ;me fijo si el arbol es vacio
         je .vacio            
 
-        cmp dword [rsi+TREE_OFFSET_CANT],1       ;si el arbol tiene un solo nodo (es hoja)
-        jne .haymashijos
-        mov rsi,[rsi+TREE_OFFSET_ROOT]   ;muevo a rsi la direccion del nodo que apunta a la raiz
-        mov [rdi+ITER_OFFSET_NODE],rsi   ;actualizo el puntero a nodo del iterador con el nodo q apunta a la raiz
+        mov rcx,[rsi+TREE_OFFSET_ROOT]
+        cmp qword [rcx+NODE_OFFSET_CHILD],NULL     ;me fijo si el arbol tiene hijos mas chicos
+        jne .haymashijos                          ;si child[0] es distino de null es porque hay mas hijos
+        mov rsi,[rsi+TREE_OFFSET_ROOT]               ;muevo a rsi la direccion del nodo que apunta a la raiz
+        mov [rdi+ITER_OFFSET_NODE],rsi            ;actualizo el puntero a nodo del iterador con el nodo q apunta a la raiz
         jmp .fin
         
         .haymashijos:

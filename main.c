@@ -11,7 +11,7 @@ int main (void){
    
     ctTree* pct;
     ct_new(&pct);
-   //ctIter* it = ctIter_new(pct);
+    ctIter* it = ctIter_new(pct);
     ct_add(pct,10);
     ct_add(pct,50);
     ct_add(pct,30); 
@@ -26,7 +26,7 @@ int main (void){
 
 
 
-     /* ctIter_first(it);
+      ctIter_first(it);
       int r = ctIter_get(it);
       printf("%d\n",r );
 
@@ -64,11 +64,11 @@ int main (void){
 
       ctIter_next(it);
       int a = ctIter_get(it);
-      printf("%d\n",a );*/
+      printf("%d\n",a );
 
 
 
-   // ctIter_delete(it);
+    ctIter_delete(it);
     ct_delete(&pct);
    
    

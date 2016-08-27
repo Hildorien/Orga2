@@ -7,11 +7,13 @@ void ct_aux_SearchAndFill(ctTree* ct,ctNode* n,uint32_t newVal){ //Esta funcion 
 			if (newVal > n->value[0]){
 				n->value[1] = newVal;
 				n->len++;          		 //Como agrego un nuevo valor a value aumento len
+				ct->size++;
 			}
 			if(newVal < n->value[0]){ 			 //En este caso el value[0] se corre al value[1] ya que newVal es mas chico
 				n->value[1] = n->value[0];
 				n->value[0] = newVal;
 				n->len++;
+				ct->size++;
 			}
 		}
 		if (n->len == 2){ // Si en el nodo hay 2 valores
@@ -20,17 +22,20 @@ void ct_aux_SearchAndFill(ctTree* ct,ctNode* n,uint32_t newVal){ //Esta funcion 
 				n->value[2] = n->value[1];
 				n->value[1] = newVal;
 				n->len++;
+				ct->size++;
 
 			}
 			if(newVal > n->value[1]){ //En este caso newVal es mas grande q val[1] asique se inserta a su derecha
 				n->value[2] = newVal;
 				n->len++;
+				ct->size++;
 			}
 			if(newVal < n->value[0]){ //En este caso newVal es mas chico que el primero(por ende el segundo tambien) entonces se corren a la derecha y se inserta newVal como primero
 				n->value[2] = n->value[1];
 				n->value[1] = n->value[0];
 				n->value[0] = newVal;
 				n->len++;
+				ct->size++;
 			}
 		}
 	}else{   //En este caso el nodo tiene los values llenos , por lo que hay que insertar en el hijo correcto

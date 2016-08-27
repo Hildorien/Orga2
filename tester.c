@@ -11,8 +11,8 @@ void casoG();
 int main() {
   remove(archivoCasoChico);
   casoC();
- // remove(archivoCasoGrande);
- // casoG();
+  remove(archivoCasoGrande);
+  casoG();
   return 0;
 }
 
@@ -36,7 +36,7 @@ void casoC(){
     FILE *pFile;
     pFile = fopen( archivoCasoChico, "a" );
     ctTree* myCT;
-  /*  fputs( ">>> Test : operaciones caso borde 1\n", pFile );
+    fputs( ">>> Test : operaciones caso borde 1\n", pFile );
     ct_new(&myCT);
     printAdd(pFile, myCT, 100);
     ct_print(myCT,pFile);
@@ -100,7 +100,7 @@ void casoC(){
     printAdd(pFile, myCT, 250);
     ct_print(myCT,pFile);
     printIterador(pFile,myCT);
-    ct_delete(&myCT);*/
+    ct_delete(&myCT);
     fputs( ">>> Test : operaciones caso borde 9\n", pFile );
     ct_new(&myCT);
     printAdd(pFile, myCT, 300);
@@ -113,7 +113,7 @@ void casoC(){
     ct_print(myCT,pFile);
     printIterador(pFile,myCT);
     ct_delete(&myCT);
-/*    fputs( ">>> Test : operaciones caso borde 10\n", pFile );
+    fputs( ">>> Test : operaciones caso borde 10\n", pFile );
     ct_new(&myCT);
     printAdd(pFile, myCT, 300);
     printAdd(pFile, myCT, 200);
@@ -213,7 +213,7 @@ void casoC(){
     ct_print(myCT,pFile);
     printIterador(pFile,myCT);
     ct_delete(&myCT);
-    fclose( pFile );*/
+    fclose( pFile );
 }
 
 void casoG() {
